@@ -35,6 +35,9 @@ global TaskParameters
 TaskParameters = BpodSystem.ProtocolSettings;
 if isempty(fieldnames(TaskParameters)) 
     % If not loading existing task settings we need to define them
+    % Make 2 panel to save space
+ 
+    
     TaskParameters.GUI.ClickSound           = 0;
     TaskParameters.GUI.PunSound             = 1;
     TaskParameters.GUI.PunLED               = 0;
@@ -45,6 +48,10 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUI.MinimumRewardDelay   = 0.01;
     TaskParameters.GUI.MaximumRewardDelay   = 0.03;
     TaskParameters.GUI.ExponentRewardDelay  = 0.02;
+    TaskParameters.GUIPanels.Panel1 = {'ClickSound','PunSound','PunLED','GraceEndIndicator','StimulusDelayMin'...
+        ,'StimulusDelayMax','StimulusDelayExp','MinimumRewardDelay','MaximumRewardDelay','ExponentRewardDelay'};    
+
+    
     TaskParameters.GUI.RewardGrace          = 0.1;
     TaskParameters.GUI.TimeForResponse      = 30; % Time after sampling for subject to respond (s)
     TaskParameters.GUI.RewardAmountLeft     = 10;
@@ -59,6 +66,9 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUI.RewardBWindow        = 20;
     TaskParameters.GUI.RewardBFactor        = 1;
     TaskParameters.GUI.LongSamplingRew      = 2;
+    TaskParameters.GUIPanels.Panel2 = {'RewardGrace','TimeForResponse','RewardAmountLeft','RewardAmountRight',...
+        'StimulusDuration','MaxMinimumSamplingDuration','InitialMinimumSamplingDuration','SumRates',...
+        'MaxPortInTime','EarlyTimeOut','RewardBias','RewardBWindow','RewardBFactor','LongSamplingRew'};   
     
     % These should maybe not be in the GUI?
     TaskParameters.GUI.MaxTrials            = 9999;
@@ -66,7 +76,7 @@ if isempty(fieldnames(TaskParameters))
     TaskParameters.GUI.Threshold            = 0.8;
     TaskParameters.GUI.StepSize             = 0.01;
     TaskParameters.GUI.Alpha                = 0.01;
-    
+    TaskParameters.GUIPanels.Panel3 = {'MaxTrials','WindowSize','Threshold','StepSize','Alpha'};   
 
 % Initialize parameter GUI plugin
 BpodParameterGUI('init', TaskParameters);
@@ -719,10 +729,10 @@ for currentTrial = 1:MaxTrials
                 BpodSystem.Data.Custom.CurrentSamplingDuration(currentTrial)=nanmean(BpodSystem.Data.Custom.SamplingDuration(EndTrial-CurrentWindow:EndTrial));
                 BpodSystem.Data.Custom.CurrentCorrectWTDropOutsLeft(currentTrial)= ...
                     round((sum(BpodSystem.Data.Custom.CorrectCatchTrial_type2(EndTrial-CurrentWindow:EndTrial)==1 & BpodSystem.Data.Custom.ChosenDirection(EndTrial-CurrentWindow:EndTrial)==1)/ ...
-                    BpodSystem.Data.Custom.nTrials)*100);
+                    BpodSystem.Data.nTrials)*100);
                 BpodSystem.Data.Custom.CurrentCorrectWTDropOutsRight(currentTrial)= ...
                     round((sum(BpodSystem.Data.Custom.CorrectCatchTrial_type2(EndTrial-CurrentWindow:EndTrial)==1 & BpodSystem.Data.Custom.ChosenDirection(EndTrial-CurrentWindow:EndTrial)==2)/ ...
-                    BpodSystem.Data.Custom.nTrials)*100);
+                    BpodSystem.Data.nTrials)*100);
                 BpodSystem.Data.Custom.CurrentMeanRewardDelay(currentTrial)=nanmean(BpodSystem.Data.Custom.RewardDelay(EndTrial-CurrentWindow:EndTrial));
             else
                 BpodSystem.Data.Custom.CurrentEarlyWithdrawal(currentTrial)=0;
