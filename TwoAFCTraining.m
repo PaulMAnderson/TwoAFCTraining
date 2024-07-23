@@ -136,6 +136,7 @@ uistack(ha,'bottom');
 % image(BG); axis off;
 
 %% Initialize Outcome Plots (sampling threshold and sampling duration)
+BpodSystem.GUIHandles.OutcomePlot = [];
 BpodSystem.GUIHandles.OutcomePlot = axes('Position', [0.075 0.66 0.9 0.25],'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
 % OutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'init',(TrialTypes==1)');
 SideOutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'init',(TrialTypes==1)');
