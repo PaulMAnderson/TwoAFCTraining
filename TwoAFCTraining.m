@@ -21,6 +21,7 @@ function TwoAFCTraining
 % Written by Josh Sanders, 10/2014.
 % Modified by Paul Masset, 02/2015.
 % Modified by Michael Lagler, 05/2018.
+% Modified by Paul Anderson, 10/2024.
 
 % SETUP
 % You will need:
@@ -82,19 +83,23 @@ if isempty(fieldnames(TaskParameters))
 BpodParameterGUI('init', TaskParameters);
 
 %% Initialize and program Pulse Pal
+if ~BpodSystem.EmulatorMode
 
-try
-    PulsePal('COM4');
-catch
-    PulsePal
+    global PulsePalSystem
+    if isempty(PulsePalSystem) || (ishandle(PulsePalSystem) && ~isvalid(PulsePalSystem))
+        try
+            PulsePal 
+        catch
+            % error('Can''t initalise Pulsepal...')
+        end
+    end   
+    
+    load EarlyWithdrawalProgram.mat
+    PulsePalEarlyWithdrawal=ParameterMatrix;
+    load PIC_ClickProgram.mat
+    ProgramPulsePal(ParameterMatrix);
+    OriginalPulsePalMatrix=ParameterMatrix;
 end
-
-load EarlyWithdrawalProgram.mat
-PulsePalEarlyWithdrawal=ParameterMatrix;
-load PIC_ClickProgram.mat
-ProgramPulsePal(ParameterMatrix);
-OriginalPulsePalMatrix=ParameterMatrix;
-
 %% PRE-ALLOCATION
 WindowSize = TaskParameters.GUI.WindowSize;
 OKTrial(1:(WindowSize+1))=NaN;
@@ -307,9 +312,10 @@ for currentTrial = 1:MaxTrials
         ValveTimeRight = RightValveTime;
         
         % We are sending the ClickTrain to PulsePal
-        SendCustomPulseTrain(2,RightClickTrain,ones(1,length(RightClickTrain))*5);
-        SendCustomPulseTrain(1,LeftClickTrain,ones(1,length(LeftClickTrain))*5);
-        
+        if ~BpodSystem.EmulatorMode
+            SendCustomPulseTrain(2,RightClickTrain,ones(1,length(RightClickTrain))*5);
+            SendCustomPulseTrain(1,LeftClickTrain,ones(1,length(LeftClickTrain))*5);
+        end        
         % Read out the minimum sampling duration variable
         MinimumSamplingDuration=BpodSystem.Data.Custom.MinimumSamplingDuration(currentTrial);
         
@@ -536,10 +542,12 @@ for currentTrial = 1:MaxTrials
                     && (isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.RewardRight(1)) && ...
                     isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.RewardLeft(1))))
                 if TaskParameters.GUI.GraceEndIndicator == 1
-                    ProgramPulsePal(PulsePalEarlyWithdrawal);
-                    TriggerPulsePal('11');
-                    pause(0.05);
-                    ProgramPulsePal(OriginalPulsePalMatrix);
+                    if ~BpodSystem.EmulatorMode
+                        ProgramPulsePal(PulsePalEarlyWithdrawal);
+                        TriggerPulsePal('11');
+                        pause(0.05);
+                        ProgramPulsePal(OriginalPulsePalMatrix);
+                    end
                 end
             end
             
@@ -549,15 +557,17 @@ for currentTrial = 1:MaxTrials
                     %% Changing peep sound to white noise after early withdrawal
                     % ProgramPulsePal(PulsePalEarlyWithdrawal);
                     % TriggerPulsePal('11');
-                    NoiseWaveVoltages=randn(1,1000)*0.5; % 200ms white noise waveform
-                    ProgramPulsePalParam(1,12,1); % Sets output channel 1 to use custom train 1
-                    ProgramPulsePalParam(2,12,2); % Sets output channel 2 to use custom train 1
-                    SendCustomWaveform(1,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
-                    SendCustomWaveform(2,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
-                    TriggerPulsePal('11'); % Soft-triggers channels 1 and 2
-                    
-                    pause(TaskParameters.GUI.EarlyTimeOut); % This is the early withdrawal timeout
-                    ProgramPulsePal(OriginalPulsePalMatrix);
+                    if ~BpodSystem.EmulatorMode
+                        NoiseWaveVoltages=randn(1,1000)*0.5; % 200ms white noise waveform
+                        ProgramPulsePalParam(1,12,1); % Sets output channel 1 to use custom train 1
+                        ProgramPulsePalParam(2,12,2); % Sets output channel 2 to use custom train 1
+                        SendCustomWaveform(1,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
+                        SendCustomWaveform(2,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
+                        TriggerPulsePal('11'); % Soft-triggers channels 1 and 2
+                        
+                        pause(TaskParameters.GUI.EarlyTimeOut); % This is the early withdrawal timeout
+                        ProgramPulsePal(OriginalPulsePalMatrix);
+                    end
                 else
                     pause(TaskParameters.GUI.EarlyTimeOut); % This is the early withdrawal timeout
                 end
