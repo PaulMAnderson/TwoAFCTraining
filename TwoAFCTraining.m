@@ -214,9 +214,9 @@ plot(1,1,'b','MarkerSize',20);
 legend('Left Choices','Right Choices','AutoUpdate','off');
 line([0,5000],[0.5,0.5],'Color','k','LineStyle','--');
 text(1,1.25,['Choice Bias: ',num2str(0),' %-diff'],'FontSize',8,'Color','k');
-text(1,1.2,['Reward Bias: ',num2str(0),' µl'],'FontSize',8,'Color','k');
-text(1,1.15,['Left reward, total: ',num2str(0),' µl','; Left reward, current: ',num2str(0),' µl'],'FontSize',8,'Color','k');
-text(1,1.1,['Right reward, total: ',num2str(0),' µl','; Right reward, current: ',num2str(0),' µl'],'FontSize',8,'Color','k');
+text(1,1.2,['Reward Bias: ',num2str(0),' Âµl'],'FontSize',8,'Color','k');
+text(1,1.15,['Left reward, total: ',num2str(0),' Âµl','; Left reward, current: ',num2str(0),' Âµl'],'FontSize',8,'Color','k');
+text(1,1.1,['Right reward, total: ',num2str(0),' Âµl','; Right reward, current: ',num2str(0),' Âµl'],'FontSize',8,'Color','k');
 text(1,1.35,['Trial: ',num2str(0)],'FontSize',12,'Color','k');
 ylim([0 1]);ylim manual;
 set(BpodSystem.ProtocolFigures.ChoiceBias,'YTickLabelMode','manual');
@@ -699,7 +699,7 @@ for currentTrial = 1:MaxTrials
                 BpodSystem.Data.Custom.LongSamplingEvent(currentTrial) = 0;
             end
             
-            % Calculate total amount of reward given so far in µl
+            % Calculate total amount of reward given so far in Âµl
             if currentTrial >= 2
                 if  BpodSystem.Data.Custom.ChosenDirection(currentTrial) == 1
                     if BpodSystem.Data.Custom.RewardedTrial(currentTrial) == 1 && BpodSystem.Data.Custom.LongSamplingEvent(currentTrial) == 0
