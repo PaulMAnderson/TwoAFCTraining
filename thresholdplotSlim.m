@@ -18,7 +18,7 @@ end
 %% PLOTTING (just using handles)
 H=get(handle);
 
-if PlotRange(end) > 1;
+if PlotRange(end) > 1
     set(handle,'Xlim',[PlotRange(1),PlotRange(end)]);
 end
 

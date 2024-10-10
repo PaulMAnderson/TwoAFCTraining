@@ -21,6 +21,7 @@ function TwoAFCTraining
 % Written by Josh Sanders, 10/2014.
 % Modified by Paul Masset, 02/2015.
 % Modified by Michael Lagler, 05/2018.
+% Modified by Paul Anderson, 10/2024.
 
 % SETUP
 % You will need:
@@ -35,9 +36,7 @@ global TaskParameters
 TaskParameters = BpodSystem.ProtocolSettings;
 if isempty(fieldnames(TaskParameters)) 
     % If not loading existing task settings we need to define them
-    % Make 2 panel to save space
- 
-    
+    % Make 2 panel to save space   
     TaskParameters.GUI.ClickSound           = 0;
     TaskParameters.GUI.PunSound             = 1;
     TaskParameters.GUI.PunLED               = 0;
@@ -82,19 +81,23 @@ if isempty(fieldnames(TaskParameters))
 BpodParameterGUI('init', TaskParameters);
 
 %% Initialize and program Pulse Pal
+if ~BpodSystem.EmulatorMode
 
-try
-    PulsePal('COM4');
-catch
-    PulsePal
+    global PulsePalSystem
+    if isempty(PulsePalSystem) || (ishandle(PulsePalSystem) && ~isvalid(PulsePalSystem))
+        try
+            PulsePal 
+        catch
+            % error('Can''t initalise Pulsepal...')
+        end
+    end   
+    
+    load EarlyWithdrawalProgram.mat
+    PulsePalEarlyWithdrawal=ParameterMatrix;
+    load PIC_ClickProgram.mat
+    ProgramPulsePal(ParameterMatrix);
+    OriginalPulsePalMatrix=ParameterMatrix;
 end
-
-load EarlyWithdrawalProgram.mat
-PulsePalEarlyWithdrawal=ParameterMatrix;
-load PIC_ClickProgram.mat
-ProgramPulsePal(ParameterMatrix);
-OriginalPulsePalMatrix=ParameterMatrix;
-
 %% PRE-ALLOCATION
 WindowSize = TaskParameters.GUI.WindowSize;
 OKTrial(1:(WindowSize+1))=NaN;
@@ -129,19 +132,20 @@ BpodSystem.Data.Custom.CurrentMeanRewardDelay = [];
 BpodSystem.Data.Custom.CurrentWindow = [];
 
 %% Initialize Live Display Plot
-BpodSystem.ProtocolFigures.LiveDispFig = figure('Position',[900 450 1000 600],'name','Live session display','numbertitle','off','MenuBar','none','Resize','off');
-ha = axes('units','normalized', 'position',[0 0 1 1]);
-uistack(ha,'bottom');
+BpodSystem.ProtocolFigures.LiveDispFig = figure('Position',[900 450 1000 600],...
+    'name','Live session display','numbertitle','off','MenuBar','none',...
+    'Resize','off','Color','w');
+% ha = axes('units','normalized', 'position',[0 0 1 1]);
+% uistack(ha,'bottom');
 % BG = imread('LiveSessionDataBG.bmp');
 % image(BG); axis off;
 
 %% Initialize Outcome Plots (sampling threshold and sampling duration)
-BpodSystem.GUIHandles.OutcomePlot = [];
-BpodSystem.GUIHandles.OutcomePlot = axes('Position', [0.075 0.66 0.9 0.25],'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
+BpodSystem.GUIHandles.OutcomePlot = axes('Position', [0.075 0.75 0.9 0.2],'TickDir','out','YColor','k','XColor','k','FontSize',6);
 % OutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'init',(TrialTypes==1)');
-SideOutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'init',(TrialTypes==1)');
+TrainingSideOutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'init',(TrialTypes==1)');
 %% Sampling Theshold Plot
-BpodSystem.ProtocolFigures.LivePlot1 = axes('position',[0.07  0.20  0.42  0.375],'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
+BpodSystem.ProtocolFigures.LivePlot1 = axes('position',[0.05  0.2  0.4  0.375],'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
 plot(0,0,'-b','LineWidth',2);
 hold on;
 plot(0,0,'--k','LineWidth',2);
@@ -149,48 +153,70 @@ xlim([0 50]);
 ylim([0 1]);ylim manual;
 livePlot1Handle = BpodSystem.ProtocolFigures.LivePlot1;
 set(livePlot1Handle,'YTickLabelMode','manual','YTickMode','manual','Box','off','TickDir','out');
-set(livePlot1Handle.Title,'String','Sampling Threshold','FontSize',8,'Color','k','FontName','arial','fontweight','bold');
-set(livePlot1Handle.YLabel,'String','% trials above threshold','FontSize',8,'Color','k','FontName','arial','fontweight','bold');
-set(livePlot1Handle.XLabel,'String','trial #','FontSize',8,'Color','k','FontName','arial','fontweight','bold');
+set(livePlot1Handle.Title,'String','Sampling Threshold','FontSize',10,'Color','k','FontName','arial','fontweight','bold');
+set(livePlot1Handle.YLabel,'String','% Trials > Threshold','FontSize',10,'Color','k','FontName','arial','fontweight','bold');
+set(livePlot1Handle.XLabel,'String','Trial #','FontSize',10,'Color','k','FontName','arial','fontweight','bold');
 
 %% Sampling Distribution Plot
-BpodSystem.ProtocolFigures.LivePlot2 = axes('position',[0.56  0.20  0.42  0.375],'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
+BpodSystem.ProtocolFigures.LivePlot2 = axes('position',[0.55  0.2  0.4  0.375],...
+    'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
 plot([0.2 0.2],[0 1],'--k','LineWidth',1);hold on
-text(0.01,0.8,['Sampling Duration: ',num2str(0),'ms'],'FontSize',8,'Color','k');
-text(0.01,0.75,['Sampling DropOuts: ',num2str(0),'%'],'FontSize',8,'Color','k');
-text(0.01,0.7,['Long Sampling Events: ',num2str(0)],'FontSize',8,'Color','k');
+text(0.01,0.8,['Avg. Sampling: ',num2str(0),'ms'],'FontSize',7,'Color','k');
+text(0.01,0.75,['Sampling DropOuts: ',num2str(0),'%'],'FontSize',7,'Color','k');
+text(0.01,0.7,['Long Sampling Events: ',num2str(0)],'FontSize',7,'Color','k');
 plot(0,0,'-b','LineWidth',2);
 xlim([0 0.6]);xlim manual;
 ylim([0 1]);ylim manual;
 livePlot2Handle = BpodSystem.ProtocolFigures.LivePlot2;
-set(livePlot2Handle,'XTickLabelMode','manual','XTickMode','manual',...
-    'YTickLabelMode','manual','YTickMode','manual','Box','off','Tickdir','out');
-set(livePlot2Handle.Title, 'String', 'Sampling Distribution', 'FontSize', 8, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
-set(livePlot2Handle.YLabel, 'String', 'P(sampling duration)', 'FontSize', 8, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
-set(livePlot2Handle.XLabel, 'String', 'sampling duration (s)', 'FontSize', 8, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
+% set(livePlot2Handle,'XTickLabelMode','manual','XTickMode','manual',...
+%     'YTickLabelMode','manual','YTickMode','manual','Box','off','Tickdir','out');
+set(livePlot2Handle,'Box','off','Tickdir','out','YTickLabelMode','manual','YTickMode','manual');
+set(livePlot2Handle.Title, 'String', 'Sampling Distribution', 'FontSize', 10, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
+set(livePlot2Handle.YLabel, 'String', 'Proportion of Trials', 'FontSize', 10, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
+set(livePlot2Handle.XLabel, 'String', 'Sampling Duration (s)', 'FontSize', 10, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
 
 %% Initialize Rest of Outcome Plots
-pause(0.5)
-BpodSystem.GUIHandles.ProtocolNameDisplay = uicontrol('Style','text','String',BpodSystem.Status.CurrentProtocolName,'Position',[170 67 175 18],'FontWeight','bold','FontSize',10,'ForegroundColor',[1 1 1],'BackgroundColor',[.45 .45 .45]);
-BpodSystem.GUIHandles.SubjectNameDisplay = uicontrol('Style', 'text', 'String', BpodSystem.GUIData.SubjectName, 'Position', [170 40 175 18], 'FontWeight', 'bold', 'FontSize', 10, 'ForegroundColor', [1 1 1], 'BackgroundColor', [.45 .45 .45]);
-BpodSystem.GUIHandles.starttime = uicontrol('Style', 'text', 'String', BpodSystem.GUIData.SettingsFileName, 'Position', [170 13 175 18], 'FontWeight', 'bold', 'FontSize', 10, 'ForegroundColor', [1 1 1], 'BackgroundColor', [.45 .45 .45]);
-BpodSystem.GUIHandles.TrialNumberDisplay = uicontrol('Style','text','String','','Position',[520 67 105 18],'FontWeight','bold','FontSize',10,'ForegroundColor',[1 1 1],'BackgroundColor',[.44 .44 .44]);
-BpodSystem.GUIHandles.TrialTypeDisplay = uicontrol('Style', 'text', 'String', '', 'Position', [520 40 105 18], 'FontWeight', 'bold', 'FontSize', 10, 'ForegroundColor', [1 1 1], 'BackgroundColor', [.44 .44 .44]);
+BpodSystem.ProtocolFigures.TextPanel = axes('position',[0.05  0  0.9  0.125],...
+    'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
+ax = BpodSystem.ProtocolFigures.TextPanel;
+ax.XAxis.Color = 'w';
+ax.YAxis.Color = 'w';
+ax.YDir = 'reverse';
+
+textNames  = {'Animal', 'TrialNum','TrialType',...
+               'SamplingThresh','SamplingDuration'};
+textLabels = {['Animal: ' BpodSystem.GUIData.SubjectName], ...
+              'Trial #: 0', 'Trial Type: None', ...
+              'Sampling Threshold: 0 ms', 'Sampling Duration: 0 ms'};
+nLabels = length(textLabels);        
+ax.XLim = [0 nLabels];
+ax.YLim = [0 1];
+xCoord = 0.5;
+yCoord = 0.5;
+textSettings = {'verticalalignment','bottom','horizontalalignment',...
+    'center','FontSize',8};
+for labelI = 1:length(textLabels)
+    BpodSystem.GUIHandles.TextLabels.(textNames{labelI}) = ...
+        text(xCoord,yCoord,textLabels{labelI},textSettings{:});
+    xCoord = xCoord + 1;
+end
 
 %% Initialize Bias Plots (Choice and WT Bias)
-BpodSystem.ProtocolFigures.Bias = figure('Position',[900 70 1000 450],'name','Bias Report','numbertitle','off','MenuBar','none','Resize','off');
+BpodSystem.ProtocolFigures.Bias = figure('Position',[900 70 800 450],...
+    'name','Bias Report','numbertitle','off','MenuBar','none','Resize','off',...
+    'Color','w');
 
 %% Choice Bias Plot
-BpodSystem.ProtocolFigures.ChoiceBias = axes('position',[0.05  0.1  0.275  0.65],'TickDir','out','YColor','k','XColor','k','FontSize',6);
+BpodSystem.ProtocolFigures.ChoiceBias = axes('position',[0.075  0.1  0.35  0.65],'TickDir','out','YColor','k','XColor','k','FontSize',6);
 plot(1,1,'r','MarkerSize',20);
 hold on;
 plot(1,1,'b','MarkerSize',20);
-legend('Left Choices','Right Choices');
+legend('Left Choices','Right Choices','AutoUpdate','off');
 line([0,5000],[0.5,0.5],'Color','k','LineStyle','--');
 text(1,1.25,['Choice Bias: ',num2str(0),' %-diff'],'FontSize',8,'Color','k');
-text(1,1.2,['Reward Bias: ',num2str(0),' µl'],'FontSize',8,'Color','k');
-text(1,1.15,['Left reward, total: ',num2str(0),' µl','; Left reward, current: ',num2str(0),' µl'],'FontSize',8,'Color','k');
-text(1,1.1,['Right reward, total: ',num2str(0),' µl','; Right reward, current: ',num2str(0),' µl'],'FontSize',8,'Color','k');
+text(1,1.2,['Reward Bias: ',num2str(0),' Âµl'],'FontSize',8,'Color','k');
+text(1,1.15,['Left reward, total: ',num2str(0),' Âµl','; Left reward, current: ',num2str(0),' Âµl'],'FontSize',8,'Color','k');
+text(1,1.1,['Right reward, total: ',num2str(0),' Âµl','; Right reward, current: ',num2str(0),' Âµl'],'FontSize',8,'Color','k');
 text(1,1.35,['Trial: ',num2str(0)],'FontSize',12,'Color','k');
 ylim([0 1]);ylim manual;
 set(BpodSystem.ProtocolFigures.ChoiceBias,'YTickLabelMode','manual');
@@ -205,11 +231,11 @@ set(ChoiceBiasAttribs.YLabel, 'String', 'choice (%)', 'FontSize', 8, 'Color', 'k
 set(ChoiceBiasAttribs.XLabel, 'String', 'trial #', 'FontSize', 8, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
 
 %% WT Bias Plot
-BpodSystem.ProtocolFigures.WTBias = axes('position',[0.385  0.1  0.275  0.65],'TickDir','out','YColor','k','XColor','k','FontSize',6);
+BpodSystem.ProtocolFigures.WTBias = axes('position',[0.6  0.1  0.35  0.65],'TickDir','out','YColor','k','XColor','k','FontSize',6);
 plot(1,1,'r','MarkerSize',20);
 hold on;
 plot(1,1,'b','MarkerSize',20);
-legend('Left Choices','Right Choices');
+legend('Left Choices','Right Choices','AutoUpdate','off');
 text(1,1.25,['Left Reward Delay Drop Outs: ',num2str(0),' %'],'FontSize',8,'Color','k');
 text(1,1.2,['Right Reward Delay Drop Outs: ',num2str(0),' %'],'FontSize',8,'Color','k');
 text(1,1.15,['Mean Waiting Time: ',num2str(0),' s'],'FontSize',8,'Color','k');
@@ -308,9 +334,10 @@ for currentTrial = 1:MaxTrials
         ValveTimeRight = RightValveTime;
         
         % We are sending the ClickTrain to PulsePal
-        SendCustomPulseTrain(2,RightClickTrain,ones(1,length(RightClickTrain))*5);
-        SendCustomPulseTrain(1,LeftClickTrain,ones(1,length(LeftClickTrain))*5);
-        
+        if ~BpodSystem.EmulatorMode
+            SendCustomPulseTrain(2,RightClickTrain,ones(1,length(RightClickTrain))*5);
+            SendCustomPulseTrain(1,LeftClickTrain,ones(1,length(LeftClickTrain))*5);
+        end        
         % Read out the minimum sampling duration variable
         MinimumSamplingDuration=BpodSystem.Data.Custom.MinimumSamplingDuration(currentTrial);
         
@@ -537,10 +564,12 @@ for currentTrial = 1:MaxTrials
                     && (isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.RewardRight(1)) && ...
                     isnan(BpodSystem.Data.RawEvents.Trial{currentTrial}.States.RewardLeft(1))))
                 if TaskParameters.GUI.GraceEndIndicator == 1
-                    ProgramPulsePal(PulsePalEarlyWithdrawal);
-                    TriggerPulsePal('11');
-                    pause(0.05);
-                    ProgramPulsePal(OriginalPulsePalMatrix);
+                    if ~BpodSystem.EmulatorMode
+                        ProgramPulsePal(PulsePalEarlyWithdrawal);
+                        TriggerPulsePal('11');
+                        pause(0.05);
+                        ProgramPulsePal(OriginalPulsePalMatrix);
+                    end
                 end
             end
             
@@ -550,15 +579,17 @@ for currentTrial = 1:MaxTrials
                     %% Changing peep sound to white noise after early withdrawal
                     % ProgramPulsePal(PulsePalEarlyWithdrawal);
                     % TriggerPulsePal('11');
-                    NoiseWaveVoltages=randn(1,1000)*0.5; % 200ms white noise waveform
-                    ProgramPulsePalParam(1,12,1); % Sets output channel 1 to use custom train 1
-                    ProgramPulsePalParam(2,12,2); % Sets output channel 2 to use custom train 1
-                    SendCustomWaveform(1,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
-                    SendCustomWaveform(2,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
-                    TriggerPulsePal('11'); % Soft-triggers channels 1 and 2
-                    
-                    pause(TaskParameters.GUI.EarlyTimeOut); % This is the early withdrawal timeout
-                    ProgramPulsePal(OriginalPulsePalMatrix);
+                    if ~BpodSystem.EmulatorMode
+                        NoiseWaveVoltages=randn(1,1000)*0.5; % 200ms white noise waveform
+                        ProgramPulsePalParam(1,12,1); % Sets output channel 1 to use custom train 1
+                        ProgramPulsePalParam(2,12,2); % Sets output channel 2 to use custom train 1
+                        SendCustomWaveform(1,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
+                        SendCustomWaveform(2,0.0002,NoiseWaveVoltages); % Uploads noise waveform. Samples are played at 5khz.
+                        TriggerPulsePal('11'); % Soft-triggers channels 1 and 2
+                        
+                        pause(TaskParameters.GUI.EarlyTimeOut); % This is the early withdrawal timeout
+                        ProgramPulsePal(OriginalPulsePalMatrix);
+                    end
                 else
                     pause(TaskParameters.GUI.EarlyTimeOut); % This is the early withdrawal timeout
                 end
@@ -668,7 +699,7 @@ for currentTrial = 1:MaxTrials
                 BpodSystem.Data.Custom.LongSamplingEvent(currentTrial) = 0;
             end
             
-            % Calculate total amount of reward given so far in µl
+            % Calculate total amount of reward given so far in Âµl
             if currentTrial >= 2
                 if  BpodSystem.Data.Custom.ChosenDirection(currentTrial) == 1
                     if BpodSystem.Data.Custom.RewardedTrial(currentTrial) == 1 && BpodSystem.Data.Custom.LongSamplingEvent(currentTrial) == 0
@@ -760,8 +791,7 @@ for currentTrial = 1:MaxTrials
             BpodSystem.Data.Custom.LeftClickTrain{currentTrial}=LeftClickTrain; % Adds the timestamps of slow click train
             
             % Update all the plots
-            UpdateOutcomePlot(TrialTypes,BpodSystem.Data);
-            UpdatePsycoPlot(BpodSystem.Data);
+            UpdatePlots(TrialTypes,BpodSystem.Data);
         end
         if BpodSystem.Status.BeingUsed == 0
             % Save all the new data
@@ -777,7 +807,7 @@ end
 
 end % End main function - PokeInCenter
 
-function UpdateOutcomePlot(TrialTypes,Data)
+function UpdatePlots(TrialTypes,Data)
     global BpodSystem
 
     Outcomes = zeros(1,Data.nTrials);
@@ -794,12 +824,7 @@ function UpdateOutcomePlot(TrialTypes,Data)
             Outcomes(x) = 0;
         end
     end
-    SideOutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'update',Data.nTrials+1,mod(TrialTypesNew,2)',Outcomes);
-end
-
-% PM Plots
-function UpdatePsycoPlot(Data)
-global BpodSystem
+    TrainingSideOutcomePlot(BpodSystem.GUIHandles.OutcomePlot,'update',Data.nTrials+1,mod(TrialTypesNew,2)',Outcomes);
 
     LiveDispFig = BpodSystem.ProtocolFigures.LiveDispFig;
     LivePlot1 = BpodSystem.ProtocolFigures.LivePlot1;
@@ -827,6 +852,37 @@ global BpodSystem
     figure(Bias);
     subplot(WTBiasFig);
     WTbiasplotPokeInCenterSlim(Data,WTBiasFig);
+
+    % Text panels 
+    labels = fieldnames(BpodSystem.GUIHandles.TextLabels);
+    for j = 1:length(labels)
+        switch labels{j}
+            case 'TrialNum'
+                newString = ['Trial #: ' num2str(Data.nTrials)];                
+                BpodSystem.GUIHandles.TextLabels.(labels{j}).String = ...
+                    newString;
+            case 'TrialType'
+                if Data.Custom.TrialTypes(Data.nTrials) == 1
+                    newString = 'Trial Type: Right';
+                else
+                    newString = 'Trial Type: Left';
+                end
+                BpodSystem.GUIHandles.TextLabels.(labels{j}).String = ...
+                    newString;
+            case 'SamplingThresh'
+                newString = ['Sampling Threshold: ' ...
+                    num2str(Data.Custom.MinimumSamplingDuration(Data.nTrials)*1000) ...
+                    ' ms'];
+                BpodSystem.GUIHandles.TextLabels.(labels{j}).String = ...
+                    newString;
+            case 'SamplingDuration'
+                newString = ['Sampling Duration: ' ...
+                    num2str(round(Data.Custom.SamplingDuration(Data.nTrials)*1000)) ...
+                    ' ms'];
+                BpodSystem.GUIHandles.TextLabels.(labels{j}).String = ...
+                    newString;
+        end
+    end
 end
 
 % function try_SendStateMatrix(sma)

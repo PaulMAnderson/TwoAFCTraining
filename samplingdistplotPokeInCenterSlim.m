@@ -18,6 +18,6 @@ set(H.Children(5),'Xdata',[SamplingDurationToPlot SamplingDurationToPlot]);
 set(H.Children(5),'Ydata',[0 1]);
 set(H.Children(2),'String',['Long Sampling Events: ',num2str(LongSamplingEvent)]);
 set(H.Children(3),'String',['Sampling DropOuts: ',num2str(CurrentEarlyWithdrawal),' %']);
-set(H.Children(4),'String',['Sampling Duration: ',num2str(CurrentSamplingDuration),' ms']);
+set(H.Children(4),'String',['Avg. Sampling: ',num2str(CurrentSamplingDuration),' ms']);
 
 end
