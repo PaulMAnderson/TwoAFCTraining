@@ -27,7 +27,7 @@ end
 %% PLOTTING (just using handles)
 H=get(handle);
 
-if PlotRange(end) > 1;
+if PlotRange(end) > 1
     set(handle,'Xlim',[PlotRange(1),PlotRange(end)]);
 end
 
@@ -38,7 +38,7 @@ set(H.Children(7),'Ydata',RightBiasPlotValue);
 set(H.Children(2),'String',['Right reward, total: ',num2str(TotalRewardGivenRight),' µl','; Right reward, current: ',num2str(RewardAmountRight),' µl']);
 set(H.Children(3),'String',['Left reward, total: ',num2str(TotalRewardGivenLeft),' µl','; Left reward, current: ',num2str(RewardAmountLeft),' µl']);
 set(H.Children(4),'String',['Reward Bias: ',num2str(RewardBias),' µl']);
-set(H.Children(5),'String',['Choice Bias: ',num2str(ChoiceBias),' %-diff']);
+set(H.Children(5),'String',['Choice Bias: ',num2str(ChoiceBias),' %' ]);
 set(H.Children(1),'String',['Trial: ',num2str(nTrials)]);
 
 if nTrials>PlottingWindow

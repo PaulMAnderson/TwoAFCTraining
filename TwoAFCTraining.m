@@ -161,7 +161,7 @@ set(livePlot1Handle.XLabel,'String','Trial #','FontSize',10,'Color','k','FontNam
 BpodSystem.ProtocolFigures.LivePlot2 = axes('position',[0.55  0.2  0.4  0.375],...
     'TickDir','out','YColor',[1 1 1],'XColor',[1 1 1],'FontSize',6);
 plot([0.2 0.2],[0 1],'--k','LineWidth',1);hold on
-text(0.01,0.8,['Sampling Duration: ',num2str(0),'ms'],'FontSize',7,'Color','k');
+text(0.01,0.8,['Avg. Sampling: ',num2str(0),'ms'],'FontSize',7,'Color','k');
 text(0.01,0.75,['Sampling DropOuts: ',num2str(0),'%'],'FontSize',7,'Color','k');
 text(0.01,0.7,['Long Sampling Events: ',num2str(0)],'FontSize',7,'Color','k');
 plot(0,0,'-b','LineWidth',2);
@@ -170,7 +170,7 @@ ylim([0 1]);ylim manual;
 livePlot2Handle = BpodSystem.ProtocolFigures.LivePlot2;
 % set(livePlot2Handle,'XTickLabelMode','manual','XTickMode','manual',...
 %     'YTickLabelMode','manual','YTickMode','manual','Box','off','Tickdir','out');
-set(livePlot2Handle,'Box','off','Tickdir','out');
+set(livePlot2Handle,'Box','off','Tickdir','out','YTickLabelMode','manual','YTickMode','manual');
 set(livePlot2Handle.Title, 'String', 'Sampling Distribution', 'FontSize', 10, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
 set(livePlot2Handle.YLabel, 'String', 'Proportion of Trials', 'FontSize', 10, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
 set(livePlot2Handle.XLabel, 'String', 'Sampling Duration (s)', 'FontSize', 10, 'Color', 'k', 'FontName', 'arial', 'fontweight', 'bold');
@@ -871,13 +871,13 @@ function UpdatePlots(TrialTypes,Data)
                     newString;
             case 'SamplingThresh'
                 newString = ['Sampling Threshold: ' ...
-                    num2str(Data.Custom.MinimumSamplingDuration(Data.nTrials)) ...
+                    num2str(Data.Custom.MinimumSamplingDuration(Data.nTrials)*1000) ...
                     ' ms'];
                 BpodSystem.GUIHandles.TextLabels.(labels{j}).String = ...
                     newString;
             case 'SamplingDuration'
                 newString = ['Sampling Duration: ' ...
-                    num2str(round(Data.Custom.SamplingDuration(Data.nTrials),2)) ...
+                    num2str(round(Data.Custom.SamplingDuration(Data.nTrials)*1000)) ...
                     ' ms'];
                 BpodSystem.GUIHandles.TextLabels.(labels{j}).String = ...
                     newString;
